@@ -94,7 +94,7 @@ public class SanPhamController {
                     String filePath = uploadDirPath + File.separator + filename;
                     file.transferTo(new File(filePath));
                     if (uploaded.length() > 0) uploaded.append(",");
-                    uploaded.append("products/" + filename);
+                    uploaded.append("images/products/" + filename);  // dòng mới đúng
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -102,4 +102,5 @@ public class SanPhamController {
         }
         return uploaded.toString();
     }
+    
 }

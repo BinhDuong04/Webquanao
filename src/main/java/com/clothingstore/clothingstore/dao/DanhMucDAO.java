@@ -91,4 +91,23 @@ public class DanhMucDAO {
             e.printStackTrace();
         }
     }
+    public DanhMuc findById(int id) {
+        String sql = "SELECT * FROM DanhMuc WHERE id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId(rs.getInt("id"));
+                dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
+                dm.setMoTa(rs.getString("moTa"));  // BỔ SUNG DÒNG NÀY
+                return dm;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }

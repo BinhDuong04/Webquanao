@@ -15,11 +15,15 @@ public class SanPham {
     private String moTa;
     private double gia;
     private int soLuong;
-    private String hinhAnh; // Lưu tên file hình ảnh
+    private String hinhAnh;
     private int idDanhMuc;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date ngayTao;
+
+    // Thêm thuộc tính danhMuc (OOP)
+    @Transient
+    private DanhMuc danhMuc;
 
     public SanPham() {
     }
@@ -35,7 +39,7 @@ public class SanPham {
         this.ngayTao = ngayTao;
     }
 
-    // Getters & Setters
+    // GETTERS & SETTERS
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -59,4 +63,8 @@ public class SanPham {
 
     public Date getNgayTao() { return ngayTao; }
     public void setNgayTao(Date ngayTao) { this.ngayTao = ngayTao; }
+
+    // GETTER SETTER cho DanhMuc
+    public DanhMuc getDanhMuc() { return danhMuc; }
+    public void setDanhMuc(DanhMuc danhMuc) { this.danhMuc = danhMuc; }
 }
