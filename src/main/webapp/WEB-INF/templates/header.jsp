@@ -13,8 +13,8 @@
         <div class="top-bar-content">
             <!-- Thanh tìm kiếm -->
             <div class="search-bar">
-                <form action="${pageContext.request.contextPath}/home/search" method="get">
-                    <input type="text" name="query" placeholder="Tìm kiếm sản phẩm..." value="${query != null ? query : ''}">
+                <form action="${pageContext.request.contextPath}/home" method="get">
+                    <input type="text" name="keyword" placeholder="Tìm kiếm sản phẩm..." value="${keyword != null ? keyword : ''}">
                     <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </form>
             </div>

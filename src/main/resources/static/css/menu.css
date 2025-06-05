@@ -36,17 +36,24 @@
     color: #fff;
 }
 
+.menu-content .nav-links li a.active {
+    background-color: #b30000;
+    border-radius: 4px;
+    color: #fff;
+}
+
+
 /* ======================= */
 /* PHẦN DANH MỤC SẢN PHẨM BÊN TRÁI */
 /* ======================= */
-.container-menu-wrapper {
+/*.container-menu-wrapper {
     max-width: 1200px;
     margin: 10px auto; 
     padding: 0 20px; 
     display: flex; 
 }
 
-/* Chính container-menu */
+ Chính container-menu 
 .container-menu {
     width: 250px;
     min-height: 600px;
@@ -97,6 +104,6 @@
 }
 
 .container-menu ul li a:hover {
-    color: #b30000; /* đỏ đậm khi hover */
-}
+    color: #b30000;  đỏ đậm khi hover 
+}*/
 

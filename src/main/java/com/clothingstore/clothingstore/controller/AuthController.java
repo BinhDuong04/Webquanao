@@ -1,6 +1,7 @@
 package com.clothingstore.clothingstore.controller;
 
 import com.clothingstore.clothingstore.dao.LoginForm;
+import com.clothingstore.clothingstore.dao.SanPhamDAO;
 import com.clothingstore.clothingstore.entity.*;
 import com.clothingstore.clothingstore.service.TaiKhoanService;
 import jakarta.persistence.EntityManager;
@@ -14,12 +15,17 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 public class AuthController {
 
     @Autowired
     private TaiKhoanService tkService;
+
+    @Autowired
+    private SanPhamDAO sanPhamDAO;   // thêm dòng này
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -88,8 +94,42 @@ public class AuthController {
     }
 
     @GetMapping("/customer/home")
-    public String customerHome() {
-        return "UserJSP/index";
+    public String customerHome(Model model,
+                               @RequestParam(value = "keyword", required = false) String keyword,
+                               @RequestParam(value = "page", defaultValue = "1") int page,
+                               @RequestParam(value = "size", defaultValue = "10") int size) {
+
+        List<SanPham> list;
+        int totalProducts;
+        int totalPages;
+
+        if (keyword != null && !keyword.isEmpty()) {
+            list = sanPhamDAO.search(keyword);
+            totalProducts = list.size();
+            int start = (page - 1) * size;
+            int end = Math.min(start + size, list.size());
+            list = list.subList(start, end);
+            totalPages = (int) Math.ceil((double) totalProducts / size);
+        } else {
+            list = sanPhamDAO.findNewestProductsPaged(page, size);
+            totalProducts = sanPhamDAO.countAllProducts();
+            totalPages = (int) Math.ceil((double) totalProducts / size);
+        }
+
+        System.out.println("==> ĐANG VÀO /customer/home: Tìm thấy " + list.size() + " sản phẩm.");
+
+        Map<DanhMuc, List<SanPham>> randomCategories = sanPhamDAO.findRandomCategoriesAndProducts();
+        List<DanhMuc> danhMucList = sanPhamDAO.findAllDanhMuc();
+
+        model.addAttribute("products", list);
+        model.addAttribute("randomCategories", randomCategories);
+        model.addAttribute("dsDanhMuc", danhMucList);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("keyword", keyword);
+
+        return "UserJSP/index";  // hoặc "UserJSP/home" nếu bạn muốn
     }
 
     @GetMapping("/admin/home")

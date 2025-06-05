@@ -37,10 +37,9 @@ public class CartController {
             return "redirect:/login";
         }
 
-        // Lấy KhachHang từ EntityManager
         KhachHang khachHang = entityManager.find(KhachHang.class, user.getId());
         if (khachHang == null) {
-            return "redirect:/login"; // nếu không có thì về login
+            return "redirect:/login";
         }
 
         GioHang gioHang = gioHangDAO.findByKhachHang(khachHang);
@@ -54,26 +53,34 @@ public class CartController {
         return "UserJSP/cart";
     }
 
-    // Thêm sp vào giỏ
+    // Thêm sản phẩm vào giỏ
     @PostMapping("/add")
-    public String addToCart(@RequestParam("productId") int productId,
-                            @RequestParam("quantity") int quantity,
-                            HttpSession session) {
+    @ResponseBody
+    public Map<String, Object> addToCart(@RequestParam("productId") int productId,
+                                     @RequestParam("quantity") int quantity,
+                                     @RequestParam(value = "size", required = false) String size,
+                                     @RequestParam(value = "color", required = false) String color,
+                                     HttpSession session) {
+
+        Map<String, Object> response = new HashMap<>();
 
         TaiKhoan user = (TaiKhoan) session.getAttribute("user");
 
         if (user == null) {
-            return "redirect:/login";
+            response.put("status", "error");
+            response.put("message", "Bạn cần đăng nhập trước khi thêm sản phẩm vào giỏ hàng.");
+            return response;
         }
 
         KhachHang khachHang = entityManager.find(KhachHang.class, user.getId());
         if (khachHang == null) {
-            return "redirect:/login";
+            response.put("status", "error");
+            response.put("message", "Không tìm thấy thông tin khách hàng.");
+            return response;
         }
 
         GioHang gioHang = gioHangDAO.findByKhachHang(khachHang);
 
-        // Nếu chưa có giỏ → tạo mới
         if (gioHang == null) {
             gioHang = new GioHang();
             gioHang.setKhachHang(khachHang);
@@ -82,6 +89,16 @@ public class CartController {
         }
 
         SanPham sp = sanPhamDAO.findById(productId);
+
+        if (sp == null) {
+            response.put("status", "error");
+            response.put("message", "Sản phẩm không tồn tại.");
+            return response;
+        }
+
+        // Tìm theo productId - nhưng hiện tại phương thức findById chỉ theo idGioHang + idSanPham
+        // Nếu muốn phân biệt theo size + color → bạn cần tạo thêm phương thức findByFullKey nếu cần.
+
         ChiTietGioHang ct = chiTietGioHangDAO.findById(gioHang, sp);
 
         if (ct == null) {
@@ -89,16 +106,23 @@ public class CartController {
             ct.setGioHang(gioHang);
             ct.setSanPham(sp);
             ct.setSoLuong(quantity);
+            ct.setKichCo(size);
+            ct.setMauSac(color);
             chiTietGioHangDAO.save(ct);
         } else {
+            // Nếu muốn cộng dồn, bạn có thể kiểm tra size + color có khớp không!
             ct.setSoLuong(ct.getSoLuong() + quantity);
+            ct.setKichCo(size);
+            ct.setMauSac(color);
             chiTietGioHangDAO.update(ct);
         }
 
-        return "redirect:/cart";
+        response.put("status", "success");
+        response.put("message", "Đã thêm sản phẩm vào giỏ hàng!");
+        return response;
     }
 
-    // Xoá 1 sản phẩm
+    // Xóa 1 sản phẩm khỏi giỏ
     @GetMapping("/remove")
     public String removeItem(@RequestParam("productId") int productId, HttpSession session) {
         TaiKhoan user = (TaiKhoan) session.getAttribute("user");
@@ -125,7 +149,7 @@ public class CartController {
         return "redirect:/cart";
     }
 
-    // API lấy số lượng sản phẩm trong giỏ (cho header)
+    // API: lấy số sản phẩm khác nhau trong giỏ
     @GetMapping("/getCartCount")
     @ResponseBody
     public Map<String, Object> getCartCount(HttpSession session) {
@@ -139,7 +163,7 @@ public class CartController {
                 GioHang gioHang = gioHangDAO.findByKhachHang(khachHang);
                 if (gioHang != null) {
                     List<ChiTietGioHang> cartItems = chiTietGioHangDAO.findByGioHang(gioHang);
-                    count = cartItems.stream().mapToInt(ChiTietGioHang::getSoLuong).sum();
+                    count = cartItems.size();
                 }
             }
         }
@@ -148,4 +172,65 @@ public class CartController {
         response.put("count", count);
         return response;
     }
+
+    // API: Cập nhật số lượng sản phẩm
+    @PostMapping("/update")
+    @ResponseBody
+    public Map<String, Object> updateQuantity(@RequestParam("productId") int productId,
+                                              @RequestParam("quantity") int quantity,
+                                              HttpSession session) {
+
+        Map<String, Object> response = new HashMap<>();
+        TaiKhoan user = (TaiKhoan) session.getAttribute("user");
+
+        if (user == null) {
+            response.put("status", "error");
+            response.put("message", "Bạn cần đăng nhập.");
+            return response;
+        }
+
+        KhachHang khachHang = entityManager.find(KhachHang.class, user.getId());
+        if (khachHang == null) {
+            response.put("status", "error");
+            response.put("message", "Không tìm thấy khách hàng.");
+            return response;
+        }
+
+        GioHang gioHang = gioHangDAO.findByKhachHang(khachHang);
+        if (gioHang == null) {
+            response.put("status", "error");
+            response.put("message", "Giỏ hàng không tồn tại.");
+            return response;
+        }
+
+        SanPham sp = sanPhamDAO.findById(productId);
+        if (sp == null) {
+            response.put("status", "error");
+            response.put("message", "Sản phẩm không tồn tại.");
+            return response;
+        }
+
+        ChiTietGioHang ct = chiTietGioHangDAO.findById(gioHang, sp);
+        if (ct == null) {
+            response.put("status", "error");
+            response.put("message", "Sản phẩm không có trong giỏ.");
+            return response;
+        }
+
+        //Kiểm tra tồn kho
+        if (quantity > sp.getSoLuong()) {
+            response.put("status", "error");
+            response.put("message", "Số lượng vượt quá số lượng còn trong kho (" + sp.getSoLuong() + " sản phẩm).");
+            return response;
+        }
+
+        // Cập nhật số lượng
+        ct.setSoLuong(quantity);
+        chiTietGioHangDAO.update(ct);
+
+        response.put("status", "success");
+        response.put("message", "Đã cập nhật số lượng.");
+        return response;
+    }
+
 }

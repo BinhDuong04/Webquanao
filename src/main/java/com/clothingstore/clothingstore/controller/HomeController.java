@@ -1,71 +1,85 @@
 package com.clothingstore.clothingstore.controller;
 
-import com.clothingstore.clothingstore.dao.DanhMucDAO;
 import com.clothingstore.clothingstore.dao.SanPhamDAO;
-import com.clothingstore.clothingstore.entity.DanhMuc;
+import com.clothingstore.clothingstore.dao.ChiTietSanPhamDAO;  // THÊM VÀO
+import com.clothingstore.clothingstore.entity.ChiTietSanPham;
 import com.clothingstore.clothingstore.entity.SanPham;
-
+import com.clothingstore.clothingstore.entity.DanhMuc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-
-import jakarta.servlet.http.HttpSession;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
+@RequestMapping("/home")
 public class HomeController {
-
-    @Autowired
-    private DanhMucDAO danhMucDAO;
 
     @Autowired
     private SanPhamDAO sanPhamDAO;
 
-    @GetMapping("/")
-    public String index(Model model) {
+    @Autowired
+    private ChiTietSanPhamDAO chiTietSanPhamDAO;  // THÊM VÀO
 
-        // Lấy danh mục
-        List<DanhMuc> categories = danhMucDAO.findAll();
+    // Trang chủ
+    @GetMapping
+    public String danhSachSanPham(
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            Model model) {
 
-        // Lấy sản phẩm mới nhất
-        List<SanPham> products = sanPhamDAO.findNewestProducts();
-        System.out.println("==> Tổng số sản phẩm mới nhất: " + products.size()); // DEBUG
+        List<SanPham> list;
+        int totalProducts;
+        int totalPages;
 
-        // Random 3 danh mục làm randomCategories
-        List<DanhMuc> randomCategories = categories.stream().limit(3).collect(Collectors.toList());
+        if (keyword != null && !keyword.isEmpty()) {
+            list = sanPhamDAO.search(keyword);
+            totalProducts = list.size();
+            int start = (page - 1) * size;
+            int end = Math.min(start + size, list.size());
+            list = list.subList(start, end);
+            totalPages = (int) Math.ceil((double) totalProducts / size);
+        } else {
+            list = sanPhamDAO.findNewestProductsPaged(page, size);
+            totalProducts = sanPhamDAO.countAllProducts();
+            totalPages = (int) Math.ceil((double) totalProducts / size);
+        }
 
-        // Tạo map sản phẩm theo danh mục (productsByCategory)
-        Map<Integer, List<SanPham>> productsByCategory = randomCategories.stream()
-                .collect(Collectors.toMap(
-                        DanhMuc::getId,
-                        cat -> sanPhamDAO.findProductsByCategory(cat.getId())
-                ));
+        Map<DanhMuc, List<SanPham>> randomCategories = sanPhamDAO.findRandomCategoriesAndProducts();
+        List<DanhMuc> danhMucList = sanPhamDAO.findAllDanhMuc();
 
-        // Remaining categories
-        List<DanhMuc> remainingCategories = categories.stream().skip(3).collect(Collectors.toList());
-        Map<Integer, List<SanPham>> otherProducts = remainingCategories.stream()
-                .collect(Collectors.toMap(
-                        DanhMuc::getId,
-                        cat -> sanPhamDAO.findProductsByCategory(cat.getId())
-                ));
-
-        Integer firstCategoryId = remainingCategories.isEmpty() ? null : remainingCategories.get(0).getId();
-
-        // Truyền vào model
-        model.addAttribute("categories", categories);
-        model.addAttribute("products", products);
+        model.addAttribute("products", list);
         model.addAttribute("randomCategories", randomCategories);
-        model.addAttribute("productsByCategory", productsByCategory);
-        model.addAttribute("remainingCategories", remainingCategories);
-        model.addAttribute("otherProducts", otherProducts);
-        model.addAttribute("firstCategoryId", firstCategoryId);
+        model.addAttribute("dsDanhMuc", danhMucList);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("keyword", keyword);
 
-        // Trả về trang index.jsp trong UserJSP
         return "UserJSP/index";
+    }
+
+    // Chi tiết sản phẩm
+    @GetMapping("/productDetail")
+    public String chiTietSanPham(@RequestParam("id") int id, Model model) {
+        SanPham sp = sanPhamDAO.findById(id);
+        if (sp == null) {
+            return "redirect:/home";
+        }
+
+        // Lấy danh sách chi tiết, lấy phần tử đầu tiên (hoặc null nếu không có)
+        List<ChiTietSanPham> ctspList = chiTietSanPhamDAO.findBySanPhamId(id);
+        ChiTietSanPham ctsp = ctspList.isEmpty() ? null : ctspList.get(0);
+
+        model.addAttribute("product", sp);
+        model.addAttribute("chiTietSanPham", ctsp);
+
+        return "UserJSP/productDetail";
     }
 
 }

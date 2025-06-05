@@ -128,13 +128,99 @@ public class SanPhamDAO {
         sp.setNgayTao(rs.getTimestamp("ngayTao"));
         return sp;
     }
-    // Lấy sản phẩm mới nhất (ví dụ 10 sản phẩm)
-    public List<SanPham> findNewestProducts() {
+    
+
+    // Lấy sản phẩm theo danh mục
+    public List<SanPham> findProductsByCategory(int categoryId) {
         List<SanPham> list = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham ORDER BY ngayTao DESC LIMIT 10";
+        String sql = "SELECT * FROM SanPham WHERE idDanhMuc = ? ORDER BY ngayTao DESC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, categoryId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapResult(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+    
+    public Map<DanhMuc, List<SanPham>> findRandomCategoriesAndProducts() {
+        Map<DanhMuc, List<SanPham>> result = new LinkedHashMap<>();
+        String sqlCategories = "SELECT * FROM DanhMuc ORDER BY RAND() LIMIT 3";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sqlCategories);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId(rs.getInt("id"));
+                dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
+                List<SanPham> products = findProductsByCategory(dm.getId());
+                result.put(dm, products);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+    public List<SanPham> findNewestProductsPaged(int page, int size) {
+        List<SanPham> list = new ArrayList<>();
+        String sql = "SELECT * FROM SanPham ORDER BY ngayTao DESC LIMIT ? OFFSET ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, size);
+            stmt.setInt(2, (page - 1) * size);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapResult(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("==> DAO: findNewestProductsPaged trả về " + list.size() + " sản phẩm.");
+        return list;
+    }
+    public int countAllProducts() {
+        String sql = "SELECT COUNT(*) FROM SanPham";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    
+    public DanhMuc findDanhMucById(int id) {
+        String sql = "SELECT * FROM DanhMuc WHERE id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                DanhMuc dm = new DanhMuc();
+                dm.setId(rs.getInt("id"));
+                dm.setTenDanhMuc(rs.getString("tenDanhMuc"));
+                return dm;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<SanPham> findByCategory(int categoryId) {
+        List<SanPham> list = new ArrayList<>();
+        String sql = "SELECT * FROM SanPham WHERE idDanhMuc = ? ORDER BY ngayTao DESC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, categoryId);
+            ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 list.add(mapResult(rs));
             }
@@ -144,10 +230,25 @@ public class SanPhamDAO {
         return list;
     }
 
-    // Lấy sản phẩm theo danh mục
-    public List<SanPham> findProductsByCategory(int categoryId) {
+    public List<SanPham> findByCategoryOrderByPriceAsc(int categoryId) {
         List<SanPham> list = new ArrayList<>();
-        String sql = "SELECT * FROM SanPham WHERE idDanhMuc = ? ORDER BY ngayTao DESC";
+        String sql = "SELECT * FROM SanPham WHERE idDanhMuc = ? ORDER BY gia ASC";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, categoryId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapResult(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public List<SanPham> findByCategoryOrderByPriceDesc(int categoryId) {
+        List<SanPham> list = new ArrayList<>();
+        String sql = "SELECT * FROM SanPham WHERE idDanhMuc = ? ORDER BY gia DESC";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, categoryId);

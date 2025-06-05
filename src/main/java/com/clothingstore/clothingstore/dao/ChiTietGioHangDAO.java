@@ -33,6 +33,10 @@ public class ChiTietGioHangDAO {
 
     // Thêm mới
     public void save(ChiTietGioHang ct) {
+        // Đảm bảo các entity liên kết là "managed"
+        ct.setSanPham(entityManager.merge(ct.getSanPham()));
+        ct.setGioHang(entityManager.merge(ct.getGioHang()));
+
         entityManager.persist(ct);
     }
 
